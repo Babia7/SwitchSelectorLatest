@@ -1,0 +1,5 @@
+{
+  "name": "Arista Switch Selector",
+  "description": "A tool to explore, filter, and compare Arista network switches and line cards based on technical specifications.",
+  "requestFramePermissions": []
+}
