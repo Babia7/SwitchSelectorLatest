@@ -31,3 +31,10 @@ export interface FilterState {
   searchTerm: string;
   sortByDensity: boolean;
 }
+
+export interface FeedbackItem {
+  id: string;
+  type: 'Bug' | 'Feature' | 'General';
+  message: string;
+  timestamp: number;
+}

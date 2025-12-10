@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { aristaSwitches, getSwitchSpeedClass } from './data';
-import type { SwitchSpec, FilterState } from './types';
+import type { SwitchSpec, FilterState, FeedbackItem } from './types';
 import SwitchCard from './components/SwitchCard';
 import FilterSidebar from './components/FilterSidebar';
 import ComparisonDrawer from './components/ComparisonDrawer';
@@ -9,7 +9,9 @@ import Analytics from './components/Analytics';
 import TextWithTooltip from './components/TextWithTooltip';
 import TopologyBuilder from './components/TopologyBuilder';
 import QuickCompare from './components/QuickCompare';
-import { Menu, X, Cloud, ChevronDown, FileText, ExternalLink, Moon, Sun, Info, Lock, ShieldCheck, ListTodo, Download, Zap, Cpu, Filter, Tag, Cable, Key, Network, FileCode, Bot, Activity, Layers, Globe, MessageSquare, Send, User, Trash2, AlertTriangle, Box, Terminal, DollarSign, Command, Search, ArrowRight, Unlock, ArrowRightLeft, Plus, Check, StickyNote, Save } from 'lucide-react';
+import SwitchDetailsModal from './components/SwitchDetailsModal';
+import AdminPanel from './components/AdminPanel';
+import { Menu, X, Cloud, ChevronDown, FileText, ExternalLink, Moon, Sun, Info, Lock, Key, Network, MessageSquare, Send, AlertTriangle, Box, ArrowRightLeft, Trash2, Search, ArrowRight, Unlock } from 'lucide-react';
 
 const seriesDescriptions: Record<string, string> = {
   '7060X6': "High-capacity, low-latency Ethernet switching optimized for AI leaf roles. Featuring fixed form factors ideal for high-scale AI clusters and high radix topologies. Support for LPO and PCIe integration.",
@@ -20,59 +22,6 @@ const seriesDescriptions: Record<string, string> = {
   '7050X4': "High-performance 400G data center switches. Optimized for hyperscale, enterprise and cloud networks with OSFP and QSFP-DD 400G options and comprehensive L2/L3 features.",
   '7050X3': "Flexible 10G/25G/100G switches with low latency and high power efficiency. Ideal for leaf and spine architectures in enterprise and cloud environments."
 };
-
-const improvementRoadmap = [
-  {
-    category: "Physical Infrastructure & Site Planning",
-    icon: Box,
-    items: [
-      { title: "Interactive Rack Elevation Builder", desc: "Drag-and-drop visualization to stack selected switches into 42U/48U cabinets. Automatically calculates total weight, power draw per rack, and available RU space." },
-      { title: "Thermal & Airflow Mapping", desc: "Visualize hot-aisle/cold-aisle requirements based on the selected 'Front-to-Rear' or 'Rear-to-Front' airflow configurations of specific SKUs." },
-      { title: "Cable Management Calculator", desc: "Estimate the volume of cabling for vertical managers based on the BOM's cable counts and diameters (DAC vs Fiber)." }
-    ]
-  },
-  {
-    category: "Financial & Lifecycle Intelligence",
-    icon: DollarSign,
-    items: [
-      { title: "TCO & Power Cost Analyzer", desc: "Calculate 5-year Total Cost of Ownership including CAPEX (Hardware) and OPEX (Power/Cooling) based on local kWh rates and typical BTU output." },
-      { title: "Lifecycle Status Indicators", desc: "Integration with official support APIs to show 'Active', 'End of Sale', or 'End of Life' status badges on switch cards." },
-      { title: "Competitor Cross-Reference", desc: "Search by Cisco Nexus, Juniper QFX, or Mellanox models to auto-suggest the equivalent Arista platform based on ASIC generation and buffer size." }
-    ]
-  },
-  {
-    category: "Automation & NetOps",
-    icon: Terminal,
-    items: [
-      { title: "EOS Config Generator", desc: "Generate downloadable EOS CLI configuration snippets (MLAG, BGP Underlay, EVPN Overlay) tailored to the specific port mappings of the generated topology." },
-      { title: "Zero Touch Provisioning (ZTP) Scripts", desc: "Auto-create ZTP boot scripts compatible with CloudVision to provision the selected BOM hardware." },
-      { title: "Ansible Inventory Export", desc: "Export the designed topology as a structured Ansible Inventory (YAML) file for Infrastructure-as-Code pipelines." }
-    ]
-  },
-  {
-    category: "Immersive Experience & UX",
-    icon: Command,
-    items: [
-      { title: "3D Product Viewer", desc: "Replace static product images with rotatable 3D models to allow inspection of port layouts, fan modules, and power supplies." },
-      { title: "Guided 'Solution Wizard'", desc: "Non-technical questionnaire (e.g., 'I need to connect 500 IP Cameras') that recommends a full topology without requiring networking knowledge." }
-    ]
-  },
-  {
-    category: "Advanced Hardware Filtering",
-    icon: Filter,
-    items: [
-      { title: "ASIC Generation Filter", desc: "Filter models by underlying silicon (e.g., Tomahawk 4/5, Jericho 2/3) for low-latency vs deep-buffer architectural decisions." },
-      { title: "Routing Scale Classification", desc: "Distinguish between 'Internet Scale' (>2M routes) and 'Enterprise Scale' based on FIB capacity." }
-    ]
-  }
-];
-
-interface FeedbackItem {
-  id: string;
-  type: 'Bug' | 'Feature' | 'General';
-  message: string;
-  timestamp: number;
-}
 
 const App: React.FC = () => {
   const [filters, setFilters] = useState<FilterState>({
@@ -99,11 +48,9 @@ const App: React.FC = () => {
 
   // Admin State
   const [adminView, setAdminView] = useState<'none' | 'login' | 'panel'>('none');
-  const [adminTab, setAdminTab] = useState<'roadmap' | 'feedback' | 'inventory'>('roadmap');
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
   const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
-  const [adminSearch, setAdminSearch] = useState('');
 
   // Topology Lock State
   const [isTopologyUnlocked, setIsTopologyUnlocked] = useState(false);
@@ -351,7 +298,6 @@ const App: React.FC = () => {
     setAdminView('none');
     setPinInput('');
     setPinError(false);
-    setAdminTab('roadmap');
   };
 
   const handleSaveNote = (id: string, note: string) => {
@@ -360,14 +306,6 @@ const App: React.FC = () => {
     setAdminNotes(updated);
     localStorage.setItem('arista_admin_notes', JSON.stringify(updated));
   };
-
-  const adminInventoryList = useMemo(() => {
-    const term = adminSearch.toLowerCase();
-    return aristaSwitches.filter(s => 
-        s.model.toLowerCase().includes(term) || 
-        (adminNotes[s.id] && adminNotes[s.id].toLowerCase().includes(term))
-    );
-  }, [adminSearch, adminNotes]);
 
 
   // Topology Lock Logic
@@ -873,225 +811,16 @@ const App: React.FC = () => {
            </div>
         )}
 
-        {/* Admin Panel (Roadmap & Feedback) Modal */}
-        {adminView === 'panel' && (
-           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
-             <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden border border-neutral-200 dark:border-neutral-800 flex flex-col">
-                <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center bg-white dark:bg-neutral-900">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-emerald-500/10 p-2 rounded-lg text-emerald-600 dark:text-emerald-400">
-                      <ShieldCheck size={20} />
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">Admin Console</h2>
-                      <p className="text-xs text-neutral-500">System management & planning</p>
-                    </div>
-                  </div>
-                  <button onClick={closeAdmin} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full text-neutral-400 transition-colors"><X size={20} /></button>
-                </div>
-
-                <div className="flex border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-950/30">
-                    <button 
-                       onClick={() => setAdminTab('roadmap')}
-                       className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all flex items-center justify-center gap-2 ${adminTab === 'roadmap' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'}`}
-                    >
-                       <ListTodo size={16} /> Improvements Roadmap
-                    </button>
-                    <button 
-                       onClick={() => setAdminTab('feedback')}
-                       className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all flex items-center justify-center gap-2 ${adminTab === 'feedback' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'}`}
-                    >
-                       <MessageSquare size={16} /> User Feedback
-                       {allFeedback.length > 0 && <span className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 text-[10px] px-1.5 py-0.5 rounded-full">{allFeedback.length}</span>}
-                    </button>
-                    <button 
-                       onClick={() => setAdminTab('inventory')}
-                       className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all flex items-center justify-center gap-2 ${adminTab === 'inventory' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'}`}
-                    >
-                       <Tag size={16} /> Inventory & Notes
-                       {Object.keys(adminNotes).length > 0 && <span className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 text-[10px] px-1.5 py-0.5 rounded-full">{Object.keys(adminNotes).length}</span>}
-                    </button>
-                </div>
-                
-                <div className="flex-1 overflow-y-auto p-6 bg-neutral-50/50 dark:bg-neutral-950/50">
-                  
-                  {/* ROADMAP TAB */}
-                  {adminTab === 'roadmap' && (
-                      <>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {improvementRoadmap.map((section, idx) => (
-                            <div key={idx} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-5 shadow-sm">
-                                <div className="flex items-center gap-2 mb-4 text-neutral-900 dark:text-neutral-100 font-semibold border-b border-neutral-100 dark:border-neutral-800 pb-2">
-                                <section.icon size={18} className="text-blue-500" />
-                                <h3>{section.category}</h3>
-                                </div>
-                                <ul className="space-y-4">
-                                {section.items.map((item, i) => (
-                                    <li key={i} className="flex gap-3 items-start group">
-                                    <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-700 group-hover:bg-blue-500 transition-colors shrink-0"></div>
-                                    <div>
-                                        <h4 className="text-sm font-medium text-neutral-800 dark:text-neutral-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.title}</h4>
-                                        <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">{item.desc}</p>
-                                    </div>
-                                    </li>
-                                ))}
-                                </ul>
-                            </div>
-                            ))}
-                        </div>
-                        
-                        <div className="mt-8 bg-blue-50 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/10 rounded-lg p-4 flex items-center gap-4">
-                            <div className="bg-blue-600 text-white p-2 rounded-full shadow-sm shrink-0">
-                            <Download size={16} />
-                            </div>
-                            <div className="flex-1">
-                                <h4 className="text-sm font-bold text-blue-900 dark:text-blue-100">Export Roadmap</h4>
-                                <p className="text-xs text-blue-700 dark:text-blue-300/70">Download this list as a CSV file for Jira import.</p>
-                            </div>
-                            <button className="px-3 py-1.5 bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 text-xs font-semibold rounded border border-blue-200 dark:border-blue-500/20 shadow-sm hover:bg-blue-50 dark:hover:bg-neutral-700 transition-colors">
-                                Download
-                            </button>
-                        </div>
-                      </>
-                  )}
-
-                  {/* FEEDBACK TAB */}
-                  {adminTab === 'feedback' && (
-                      <div className="space-y-4">
-                          <div className="flex justify-between items-center mb-4">
-                              <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-wider">Submitted Feedback ({allFeedback.length})</h3>
-                              {allFeedback.length > 0 && (
-                                <button 
-                                  onClick={clearFeedback}
-                                  className="text-xs flex items-center gap-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium px-3 py-1.5 bg-red-50 dark:bg-red-900/10 rounded-md transition-colors"
-                                >
-                                    <Trash2 size={12} /> Clear All
-                                </button>
-                              )}
-                          </div>
-
-                          {allFeedback.length === 0 ? (
-                              <div className="text-center py-20 text-neutral-400">
-                                  <MessageSquare size={48} className="mx-auto mb-3 opacity-20" />
-                                  <p className="text-sm font-medium">No feedback submitted yet.</p>
-                              </div>
-                          ) : (
-                              <div className="space-y-3">
-                                  {allFeedback.map((item) => (
-                                      <div key={item.id} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 shadow-sm hover:border-blue-200 dark:hover:border-blue-800 transition-colors">
-                                          <div className="flex justify-between items-start mb-2">
-                                              <div className="flex items-center gap-2">
-                                                 <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${
-                                                     item.type === 'Bug' ? 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-900/30' :
-                                                     item.type === 'Feature' ? 'bg-purple-50 text-purple-600 border-purple-100 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-900/30' :
-                                                     'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-900/30'
-                                                 }`}>
-                                                     {item.type}
-                                                 </span>
-                                                 <span className="text-xs text-neutral-400">
-                                                     {new Date(item.timestamp).toLocaleString()}
-                                                 </span>
-                                              </div>
-                                              {item.id.startsWith('system-') ? (
-                                                  <div className="text-blue-500" title="Verified System Message"><ShieldCheck size={14} /></div>
-                                              ) : (
-                                                  <User size={14} className="text-neutral-300" />
-                                              )}
-                                          </div>
-                                          <p className="text-sm text-neutral-700 dark:text-neutral-200 leading-relaxed whitespace-pre-wrap">
-                                              {item.message}
-                                          </p>
-                                      </div>
-                                  ))}
-                              </div>
-                          )}
-                      </div>
-                  )}
-
-                  {/* INVENTORY & NOTES TAB */}
-                  {adminTab === 'inventory' && (
-                      <div className="space-y-4">
-                          <div className="mb-4">
-                              <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-wider mb-2">Switch Inventory & Notes</h3>
-                              <p className="text-xs text-neutral-400 mb-4">Add internal notes or annotations to specific switch models. These notes will appear on the cards for all users.</p>
-                              
-                              <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" size={14} />
-                                <input 
-                                    type="text" 
-                                    value={adminSearch}
-                                    onChange={(e) => setAdminSearch(e.target.value)}
-                                    placeholder="Search switches..."
-                                    className="w-full pl-9 pr-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white"
-                                />
-                              </div>
-                          </div>
-
-                          <div className="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-                              <div className="max-h-[500px] overflow-y-auto divide-y divide-neutral-100 dark:divide-neutral-800">
-                                  {adminInventoryList.length === 0 ? (
-                                      <div className="p-8 text-center text-neutral-400 text-sm">No switches found matching your search.</div>
-                                  ) : (
-                                      adminInventoryList.map(sw => (
-                                          <div key={sw.id} className="p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors flex flex-col md:flex-row gap-4 items-start md:items-center">
-                                              <div className="flex-1 min-w-0">
-                                                  <div className="flex items-center gap-2 mb-1">
-                                                      <span className="font-bold text-sm text-neutral-900 dark:text-neutral-200 truncate">{sw.model}</span>
-                                                      <span className="text-[10px] bg-neutral-100 dark:bg-neutral-800 text-neutral-500 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700">{sw.series}</span>
-                                                      {adminNotes[sw.id] && (
-                                                          <span className="text-[10px] bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 px-1.5 py-0.5 rounded border border-yellow-200 dark:border-yellow-800 font-bold flex items-center gap-1">
-                                                              <StickyNote size={10} /> Note Added
-                                                          </span>
-                                                      )}
-                                                  </div>
-                                                  <div className="text-xs text-neutral-400 truncate">{sw.description}</div>
-                                              </div>
-                                              <div className="w-full md:w-1/2">
-                                                  <div className="flex gap-2">
-                                                    <input 
-                                                        type="text" 
-                                                        placeholder="Add a note..."
-                                                        defaultValue={adminNotes[sw.id] || ''}
-                                                        onBlur={(e) => handleSaveNote(sw.id, e.target.value)}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter') {
-                                                                handleSaveNote(sw.id, e.currentTarget.value);
-                                                                e.currentTarget.blur();
-                                                            }
-                                                        }}
-                                                        className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded px-3 py-1.5 text-xs text-neutral-700 dark:text-neutral-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-                                                    />
-                                                    {adminNotes[sw.id] && (
-                                                        <button 
-                                                          onClick={() => {
-                                                            const newNotes = {...adminNotes};
-                                                            delete newNotes[sw.id];
-                                                            setAdminNotes(newNotes);
-                                                            localStorage.setItem('arista_admin_notes', JSON.stringify(newNotes));
-                                                            // Force input update hack
-                                                            const input = document.activeElement as HTMLInputElement;
-                                                            if (input) input.value = '';
-                                                          }}
-                                                          className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                                          title="Clear Note"
-                                                        >
-                                                            <Trash2 size={14} />
-                                                        </button>
-                                                    )}
-                                                  </div>
-                                              </div>
-                                          </div>
-                                      ))
-                                  )}
-                              </div>
-                          </div>
-                      </div>
-                  )}
-
-                </div>
-             </div>
-           </div>
-        )}
+        {/* Admin Panel Component */}
+        <AdminPanel
+            isOpen={adminView === 'panel'}
+            onClose={closeAdmin}
+            feedback={allFeedback}
+            onClearFeedback={clearFeedback}
+            switches={aristaSwitches}
+            notes={adminNotes}
+            onSaveNote={handleSaveNote}
+        />
 
       </div>
 
@@ -1266,112 +995,15 @@ const App: React.FC = () => {
       )}
 
       {/* Details Modal */}
-      {modalData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 dark:bg-black/60 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col ring-1 ring-neutral-200 dark:ring-neutral-700/50">
-                <div className="px-6 py-5 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-start bg-white dark:bg-neutral-900 z-10">
-                    <div>
-                        <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">{modalData.model}</h2>
-                        <div className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-                          <TextWithTooltip text={modalData.description} />
-                        </div>
-                    </div>
-                    <button 
-                        onClick={() => setModalData(null)}
-                        className="p-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300"
-                    >
-                        <X size={20} />
-                    </button>
-                </div>
-                
-                {/* Admin Note Warning in Modal */}
-                {adminNotes[modalData.id] && (
-                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-100 dark:border-yellow-900/30 px-6 py-3 flex items-start gap-3">
-                        <StickyNote className="text-yellow-600 dark:text-yellow-500 shrink-0 mt-0.5" size={16} />
-                        <div>
-                            <span className="text-xs font-bold text-yellow-700 dark:text-yellow-400 uppercase tracking-wide block mb-0.5">Administrator Note</span>
-                            <p className="text-sm text-yellow-800 dark:text-yellow-200/90">{adminNotes[modalData.id]}</p>
-                        </div>
-                    </div>
-                )}
-
-                <div className="p-6 overflow-y-auto bg-white dark:bg-neutral-900">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8">
-                        <DetailItem label="Series" value={`${modalData.series} Series`} />
-                        <DetailItem label="Type" value={modalData.type} />
-                        <DetailItem label="Total Throughput" value={`${modalData.throughputTbps} Tbps`} highlight />
-                        <DetailItem label="Packets Per Second" value={modalData.pps} />
-                        <DetailItem label="Form Factor" value={modalData.size} />
-                        <DetailItem label="Power Draw" value={modalData.powerDraw} />
-                        <DetailItem label="Packet Buffer" value={modalData.buffer} />
-                        <DetailItem label="Latency" value={modalData.latency} />
-                        {modalData.eosLicense && (
-                             <DetailItem label="EOS Feature License" value={modalData.eosLicense} />
-                        )}
-                        
-                        <div className="col-span-1 sm:col-span-2 mt-2 pt-6 border-t border-dashed border-neutral-200 dark:border-neutral-800">
-                             <h4 className="font-semibold text-neutral-800 dark:text-neutral-200 mb-4 text-sm flex items-center gap-2">
-                                Port Configuration <span className="h-px flex-1 bg-neutral-200 dark:bg-neutral-800"></span>
-                             </h4>
-                             <div className="grid grid-cols-3 gap-4">
-                                <PortBox label="800G" count={modalData.max800G} />
-                                <PortBox label="400G" count={modalData.max400G} />
-                                <PortBox label="100G" count={modalData.max100G} />
-                             </div>
-                             <div className="mt-4 p-3 bg-neutral-50 dark:bg-neutral-950/50 rounded-lg border border-neutral-200 dark:border-neutral-800">
-                                <p className="text-xs text-neutral-500 font-medium">Physical Ports</p>
-                                <div className="text-sm text-neutral-700 dark:text-neutral-300 mt-1">
-                                  <TextWithTooltip text={modalData.ports} />
-                                </div>
-                             </div>
-                        </div>
-                    </div>
-                </div>
-                <div className="px-6 py-4 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-950/30 flex justify-between items-center">
-                    <button 
-                        onClick={() => toggleSelection(modalData.id)}
-                        className={`px-4 py-2 text-sm font-medium rounded-md border transition-all shadow-sm flex items-center gap-2 ${
-                            selectedIds.includes(modalData.id) 
-                            ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' 
-                            : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700'
-                        }`}
-                    >
-                        {selectedIds.includes(modalData.id) ? (
-                            <>
-                                <Check size={16} /> Compared
-                            </>
-                        ) : (
-                            <>
-                                <Plus size={16} /> Compare
-                            </>
-                        )}
-                    </button>
-                    <button 
-                        onClick={() => setModalData(null)}
-                        className="px-4 py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-sm font-medium rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-700 hover:text-neutral-900 dark:hover:text-white transition-all shadow-sm"
-                    >
-                        Close
-                    </button>
-                </div>
-            </div>
-        </div>
-      )}
+      <SwitchDetailsModal
+        data={modalData}
+        onClose={() => setModalData(null)}
+        selectedIds={selectedIds}
+        onToggleSelect={toggleSelection}
+        adminNote={modalData ? adminNotes[modalData.id] : undefined}
+      />
     </div>
   );
 };
-
-const DetailItem = ({ label, value, highlight = false }: { label: string, value: string, highlight?: boolean }) => (
-    <div className="flex flex-col gap-1">
-        <dt className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest">{label}</dt>
-        <dd className={`font-medium ${highlight ? 'text-blue-600 dark:text-blue-400 text-xl tracking-tight' : 'text-neutral-800 dark:text-neutral-200 text-sm'}`}>{value}</dd>
-    </div>
-);
-
-const PortBox = ({ label, count }: { label: string, count: number }) => (
-    <div className={`p-4 rounded-lg border transition-all ${count > 0 ? 'bg-white dark:bg-neutral-800/50 border-blue-500/20 ring-1 ring-blue-500/10 shadow-sm' : 'bg-neutral-50 dark:bg-neutral-950 border-transparent opacity-40'}`}>
-        <div className={`text-2xl font-bold ${count > 0 ? 'text-neutral-900 dark:text-neutral-100' : 'text-neutral-400 dark:text-neutral-600'}`}>{count}</div>
-        <div className="text-[10px] font-semibold text-neutral-500 uppercase mt-1">{label} Ports</div>
-    </div>
-);
 
 export default App;
