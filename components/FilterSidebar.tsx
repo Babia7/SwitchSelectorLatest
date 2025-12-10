@@ -1,15 +1,25 @@
 
+
+
 import React from 'react';
 import type { FilterState } from '../types';
-import { SlidersHorizontal, Search, RotateCcw } from 'lucide-react';
+import { SlidersHorizontal, Search, RotateCcw, Zap } from 'lucide-react';
 
 interface FilterSidebarProps {
   filters: FilterState;
   setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
   totalCount: number;
+  availableSeries: string[];
+  availableSpeeds: string[];
 }
 
-const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, setFilters, totalCount }) => {
+const FilterSidebar: React.FC<FilterSidebarProps> = ({ 
+  filters, 
+  setFilters, 
+  totalCount,
+  availableSeries,
+  availableSpeeds
+}) => {
   
   const handleSeriesChange = (series: string) => {
     setFilters(prev => {
@@ -20,18 +30,27 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, setFilters, tota
     });
   };
 
+  const handleSpeedChange = (speed: string) => {
+    setFilters(prev => {
+      const newSpeeds = prev.nativeSpeeds.includes(speed)
+        ? prev.nativeSpeeds.filter(s => s !== speed)
+        : [...prev.nativeSpeeds, speed];
+      return { ...prev, nativeSpeeds: newSpeeds };
+    });
+  };
+
   const resetFilters = () => {
       setFilters({
         series: [],
+        nativeSpeeds: [],
         minThroughput: 0,
         min800G: 0,
         min400G: 0,
         min100G: 0,
-        searchTerm: ''
+        searchTerm: '',
+        sortByDensity: false
       });
   };
-
-  const seriesOptions = ['7060X6', '7800R4', '7700R4', '7280R3A', '7280R3', '7050X4', '7050X3'];
 
   return (
     <div className="w-full h-full flex flex-col bg-white dark:bg-neutral-900 transition-colors duration-300">
@@ -66,11 +85,57 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, setFilters, tota
       </div>
 
       <div className="p-6 space-y-8 overflow-y-auto flex-1 scrollbar-thin">
-        {/* Series Filter */}
+        
+        {/* Highest Density Toggle */}
         <section>
-          <h3 className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-3">Series</h3>
+             <button
+                onClick={() => setFilters(prev => ({ ...prev, sortByDensity: !prev.sortByDensity }))}
+                className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${
+                    filters.sortByDensity 
+                    ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-500 text-purple-700 dark:text-purple-300' 
+                    : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-purple-300'
+                }`}
+             >
+                <div className="flex items-center gap-2">
+                    <div className={`p-1.5 rounded-md ${filters.sortByDensity ? 'bg-purple-600 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500'}`}>
+                        <Zap size={14} fill={filters.sortByDensity ? "currentColor" : "none"} />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-wide">Sort by Highest Density</span>
+                </div>
+                {filters.sortByDensity && <span className="w-2 h-2 rounded-full bg-purple-500"></span>}
+             </button>
+             {filters.sortByDensity && (
+                 <p className="text-[10px] text-neutral-400 mt-2 px-1">
+                     Filters for 7280R3/A, 7060X6, 7050X3/4 and sorts by port count based on selected speed.
+                 </p>
+             )}
+        </section>
+
+        {/* Speed Filter (Prioritized for Density Sort) */}
+        <section>
+          <h3 className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-3">Native Speed</h3>
+          <div className="grid grid-cols-2 gap-2">
+            {availableSpeeds.map(speed => (
+              <label key={speed} className="flex items-center cursor-pointer group">
+                <div className="relative flex items-center">
+                    <input
+                    type="checkbox"
+                    checked={filters.nativeSpeeds.includes(speed)}
+                    onChange={() => handleSpeedChange(speed)}
+                    className="peer h-4 w-4 rounded border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-blue-600 focus:ring-blue-500/20 transition-all cursor-pointer checked:bg-blue-600 checked:border-blue-600"
+                    />
+                </div>
+                <span className="ml-2.5 text-sm text-neutral-600 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-neutral-200 font-medium transition-colors">{speed} Native</span>
+              </label>
+            ))}
+          </div>
+        </section>
+
+        {/* Series Filter (Disabled in Density Mode) */}
+        <section className={filters.sortByDensity ? 'opacity-50 pointer-events-none' : ''}>
+          <h3 className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-3">Series {filters.sortByDensity && '(Auto-selected)'}</h3>
           <div className="space-y-2">
-            {seriesOptions.map(series => (
+            {availableSeries.map(series => (
               <label key={series} className="flex items-center cursor-pointer group">
                 <div className="relative flex items-center">
                     <input

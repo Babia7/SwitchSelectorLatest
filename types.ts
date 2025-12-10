@@ -18,13 +18,16 @@ export interface SwitchSpec {
   powerDraw: string;
   size: string;
   weight: string;
+  eosLicense?: string;
 }
 
 export interface FilterState {
   series: string[];
+  nativeSpeeds: string[];
   minThroughput: number;
   min800G: number;
   min400G: number;
   min100G: number;
   searchTerm: string;
+  sortByDensity: boolean;
 }

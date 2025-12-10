@@ -1,7 +1,7 @@
 
 import React from 'react';
 import type { SwitchSpec } from '../types';
-import { X, ArrowDownUp } from 'lucide-react';
+import { X, ArrowDownUp, Download, FileSpreadsheet, Printer } from 'lucide-react';
 
 interface ComparisonDrawerProps {
   selectedSwitches: SwitchSpec[];
@@ -19,8 +19,60 @@ const ComparisonDrawer: React.FC<ComparisonDrawerProps> = ({ selectedSwitches, o
     return selectedSwitches.some(s => s[key] !== firstVal);
   };
 
+  const handleExportCSV = () => {
+    const headers = ['Feature', ...selectedSwitches.map(s => s.model)];
+    
+    // Helper to safely format CSV cells
+    const safeCell = (val: string | number | undefined) => {
+        const str = String(val || '-');
+        // If contains comma, newline or double quote, wrap in quotes and escape double quotes
+        if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+            return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+    };
+
+    const rows = [
+        ['Series', ...selectedSwitches.map(s => s.series)],
+        ['Type', ...selectedSwitches.map(s => s.type)],
+        ['Description', ...selectedSwitches.map(s => s.description)],
+        ['Throughput', ...selectedSwitches.map(s => `${s.throughputTbps} Tbps`)],
+        ['Packets/Sec', ...selectedSwitches.map(s => s.pps)],
+        ['Latency', ...selectedSwitches.map(s => s.latency)],
+        ['800G Ports', ...selectedSwitches.map(s => s.max800G || '0')],
+        ['400G Ports', ...selectedSwitches.map(s => s.max400G || '0')],
+        ['100G Ports', ...selectedSwitches.map(s => s.max100G || '0')],
+        ['Port Details', ...selectedSwitches.map(s => s.ports)],
+        ['Buffer', ...selectedSwitches.map(s => s.buffer)],
+        ['CPU', ...selectedSwitches.map(s => s.cpu)],
+        ['Memory', ...selectedSwitches.map(s => s.memory)],
+        ['Power Draw', ...selectedSwitches.map(s => s.powerDraw)],
+        ['Form Factor', ...selectedSwitches.map(s => s.size)],
+        ['Weight', ...selectedSwitches.map(s => s.weight)],
+        ['EOS License', ...selectedSwitches.map(s => s.eosLicense || 'N/A')]
+    ];
+
+    const csvContent = [
+        headers.map(safeCell).join(','),
+        ...rows.map(row => row.map(safeCell).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `switch_comparison_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrint = () => {
+      window.print();
+  };
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 flex flex-col animate-slide-up">
+    <div className="fixed bottom-0 left-0 right-0 z-40 flex flex-col animate-slide-up print:hidden">
       {/* Decorative top border glow */}
       <div className="h-px w-full bg-gradient-to-r from-transparent via-blue-500/30 to-transparent"></div>
       
@@ -35,12 +87,30 @@ const ComparisonDrawer: React.FC<ComparisonDrawerProps> = ({ selectedSwitches, o
                     <p className="text-xs text-neutral-500">{selectedSwitches.length} items selected</p>
                 </div>
             </div>
-            <button 
-            onClick={onClear} 
-            className="text-xs text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-medium px-3 py-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-            >
-            Clear All
-            </button>
+            
+            <div className="flex items-center gap-2">
+                <button 
+                    onClick={handleExportCSV}
+                    className="hidden sm:flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-md text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                    title="Download CSV"
+                >
+                    <FileSpreadsheet size={14} /> Export CSV
+                </button>
+                <button 
+                    onClick={handlePrint}
+                    className="hidden sm:flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-md text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                    title="Print or Save as PDF"
+                >
+                    <Printer size={14} /> Print
+                </button>
+                <div className="w-px h-4 bg-neutral-300 dark:bg-neutral-700 mx-1 hidden sm:block"></div>
+                <button 
+                    onClick={onClear} 
+                    className="text-xs text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-medium px-3 py-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                >
+                    Clear All
+                </button>
+            </div>
         </div>
 
         <div className="overflow-auto flex-1 p-0 scrollbar-thin">
@@ -107,6 +177,7 @@ const ComparisonDrawer: React.FC<ComparisonDrawerProps> = ({ selectedSwitches, o
                     <DataRow label="Power" hasDiff={hasDiff('powerDraw')} values={selectedSwitches.map(s => <span className="font-mono text-xs">{s.powerDraw}</span>)} />
                     <DataRow label="Form Factor" hasDiff={hasDiff('size')} values={selectedSwitches.map(s => s.size)} />
                     <DataRow label="Weight" hasDiff={hasDiff('weight')} values={selectedSwitches.map(s => <span className="text-xs">{s.weight}</span>)} />
+                    <DataRow label="EOS License" hasDiff={hasDiff('eosLicense')} values={selectedSwitches.map(s => <span className="text-xs font-mono bg-neutral-100 dark:bg-neutral-800 px-1 py-0.5 rounded text-neutral-600 dark:text-neutral-400">{s.eosLicense || '-'}</span>)} />
                 </tbody>
             </table>
         </div>

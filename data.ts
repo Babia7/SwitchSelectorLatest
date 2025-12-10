@@ -1,6 +1,20 @@
 
 import type { SwitchSpec } from './types';
 
+// Helper to determine speed class (Shared with filtering logic)
+export const getSwitchSpeedClass = (data: SwitchSpec): string => {
+    if (data.max800G > 0) return '800G';
+    if (data.max400G > 0) return '400G';
+    
+    const specs = (data.description + ' ' + data.ports).toUpperCase();
+    
+    if (specs.includes('50G') || specs.includes('SFP50')) return '50G';
+    if (specs.includes('25G') || specs.includes('SFP25')) return '25G';
+    if (specs.includes('10G') || specs.includes('SFP+') || specs.includes('RJ45')) return '10G';
+
+    return '100G';
+};
+
 export const aristaSwitches: SwitchSpec[] = [
   // --- Page 1: 7060X6 Series ---
   {
@@ -21,7 +35,8 @@ export const aristaSwitches: SwitchSpec[] = [
     buffer: '165 MB',
     powerDraw: '640W/2218W',
     size: '2RU',
-    weight: '46 lbs'
+    weight: '46 lbs',
+    eosLicense: 'LIC-FIX-4'
   },
   {
     id: '7060X6-64PE-B',
@@ -41,7 +56,8 @@ export const aristaSwitches: SwitchSpec[] = [
     buffer: '165 MB',
     powerDraw: '640W/2218W',
     size: '2RU',
-    weight: '46 lbs'
+    weight: '46 lbs',
+    eosLicense: 'LIC-FIX-4'
   },
   {
     id: '7060X6-32PE',
@@ -61,7 +77,8 @@ export const aristaSwitches: SwitchSpec[] = [
     buffer: '84 MB',
     powerDraw: '348W/1136W',
     size: '1RU',
-    weight: '29.2 lbs'
+    weight: '29.2 lbs',
+    eosLicense: 'LIC-FIX-3'
   },
   
   // --- Page 3: 7800R4 Line Cards ---
@@ -145,7 +162,8 @@ export const aristaSwitches: SwitchSpec[] = [
     buffer: '16 GB',
     powerDraw: '593W/1840W',
     size: '7RU',
-    weight: '110.3 lbs'
+    weight: '110.3 lbs',
+    eosLicense: 'LIC-DL'
   },
   {
     id: '7720R4-128PE',
@@ -591,7 +609,8 @@ export const aristaSwitches: SwitchSpec[] = [
     buffer: '60 MB',
     powerDraw: '480 W / 985 W',
     size: '1U',
-    weight: '20 lbs (9.07 kg)'
+    weight: '20 lbs (9.07 kg)',
+    eosLicense: 'LIC-FIX-4'
   },
   {
     id: '7050PX4-32S',
@@ -611,7 +630,8 @@ export const aristaSwitches: SwitchSpec[] = [
     buffer: '60 MB',
     powerDraw: '520 W / 1060 W',
     size: '1U',
-    weight: '20 lbs (9.07 kg)'
+    weight: '20 lbs (9.07 kg)',
+    eosLicense: 'LIC-FIX-4'
   },
   {
     id: '7050DX4M-32S',
@@ -631,7 +651,8 @@ export const aristaSwitches: SwitchSpec[] = [
     buffer: '60 MB',
     powerDraw: '500 W / 1005 W',
     size: '1U',
-    weight: '20 lbs (9.07 kg)'
+    weight: '20 lbs (9.07 kg)',
+    eosLicense: 'LIC-FIX-4'
   },
   {
     id: '7050SDX4-48D8',
@@ -651,7 +672,8 @@ export const aristaSwitches: SwitchSpec[] = [
     buffer: '28 MB',
     powerDraw: '352 W / 780 W',
     size: '1U',
-    weight: '18 lbs (8.16 kg)'
+    weight: '18 lbs (8.16 kg)',
+    eosLicense: 'LIC-FIX-4'
   },
   {
     id: '7050SPX4-48D8',
@@ -671,7 +693,8 @@ export const aristaSwitches: SwitchSpec[] = [
     buffer: '28 MB',
     powerDraw: '352 W / 780 W',
     size: '1U',
-    weight: '18 lbs (8.16 kg)'
+    weight: '18 lbs (8.16 kg)',
+    eosLicense: 'LIC-FIX-4'
   },
   {
     id: '7050CX4-24D8',
@@ -691,7 +714,8 @@ export const aristaSwitches: SwitchSpec[] = [
     buffer: '32 MB',
     powerDraw: '425 W / 880 W',
     size: '1U',
-    weight: '18 lbs (8.16 kg)'
+    weight: '18 lbs (8.16 kg)',
+    eosLicense: 'LIC-FIX-4'
   },
   {
     id: '7050CX4M-48D8',
@@ -711,7 +735,8 @@ export const aristaSwitches: SwitchSpec[] = [
     buffer: '28 MB',
     powerDraw: '400 W / 820 W',
     size: '1U',
-    weight: '18 lbs (8.16 kg)'
+    weight: '18 lbs (8.16 kg)',
+    eosLicense: 'LIC-FIX-4'
   },
   {
     id: '7050X4-48Y-4DF',
@@ -731,7 +756,8 @@ export const aristaSwitches: SwitchSpec[] = [
     buffer: '24 MB',
     powerDraw: '305 W / 620 W',
     size: '1U',
-    weight: '18 lbs (8.16 kg)'
+    weight: '18 lbs (8.16 kg)',
+    eosLicense: 'LIC-FIX-3'
   },
 
   // --- 7050X3 Series ---
@@ -739,9 +765,9 @@ export const aristaSwitches: SwitchSpec[] = [
     id: '7050CX3-32S/32C',
     model: '7050CX3-32S/32C',
     series: '7050X3',
-    description: '32x 100G OSFP switch',
+    description: '32x 100G QSFP switch',
     type: 'Switch',
-    ports: '32x OSFP100, 2x SFP+',
+    ports: '32x QSFP100, 2x SFP+',
     max800G: 0,
     max400G: 0,
     max100G: 32,
@@ -753,7 +779,8 @@ export const aristaSwitches: SwitchSpec[] = [
     buffer: '32 MB',
     powerDraw: '165-168 W / 334-343 W',
     size: '1U',
-    weight: '20-21 lbs (9.1-9.5 kg)'
+    weight: '20-21 lbs (9.1-9.5 kg)',
+    eosLicense: 'LIC-FIX-2'
   },
   {
     id: '7050SX3-96YC8',
@@ -773,7 +800,8 @@ export const aristaSwitches: SwitchSpec[] = [
     buffer: '32 MB',
     powerDraw: '218 W / 453 W',
     size: '2U',
-    weight: '43 lbs (19.5 kg)'
+    weight: '43 lbs (19.5 kg)',
+    eosLicense: 'LIC-FIX-2'
   },
   {
     id: '7050SX3-48YC12',
@@ -793,7 +821,8 @@ export const aristaSwitches: SwitchSpec[] = [
     buffer: '8 MB',
     powerDraw: '170 W / 325 W',
     size: '1U',
-    weight: '20.3 lbs (9.22 kg)'
+    weight: '20.3 lbs (9.22 kg)',
+    eosLicense: 'LIC-FIX-2'
   },
   {
     id: '7050SX3-48YC8/C8C',
@@ -813,7 +842,8 @@ export const aristaSwitches: SwitchSpec[] = [
     buffer: '8 MB',
     powerDraw: '119-124 W / 290-301 W',
     size: '1U',
-    weight: '21 lbs (9.45 kg)'
+    weight: '21 lbs (9.45 kg)',
+    eosLicense: 'LIC-FIX-2'
   },
   {
     id: '7050SX3-48C8/C8C',
@@ -833,7 +863,8 @@ export const aristaSwitches: SwitchSpec[] = [
     buffer: '8 MB',
     powerDraw: '105-106 W / 259-285 W',
     size: '1U',
-    weight: '21 lbs (9.45 kg)'
+    weight: '21 lbs (9.45 kg)',
+    eosLicense: 'LIC-FIX-2'
   },
   {
     id: '7050TX3-48C8',
@@ -853,7 +884,8 @@ export const aristaSwitches: SwitchSpec[] = [
     buffer: '8 MB',
     powerDraw: '212 W / 346 W',
     size: '1U',
-    weight: '20.6 lbs (9.36 kg)'
+    weight: '20.6 lbs (9.36 kg)',
+    eosLicense: 'LIC-FIX-2'
   },
   {
     id: '7050SX3-24YC4C',
@@ -873,6 +905,7 @@ export const aristaSwitches: SwitchSpec[] = [
     buffer: '2 MB',
     powerDraw: '88 W / 178 W',
     size: '1U',
-    weight: '15 lbs (6.8 kg)'
+    weight: '15 lbs (6.8 kg)',
+    eosLicense: 'LIC-FIX-2'
   }
 ];
