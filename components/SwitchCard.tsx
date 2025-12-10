@@ -2,7 +2,7 @@
 import React from 'react';
 import type { SwitchSpec } from '../types';
 import { getSwitchSpeedClass } from '../data';
-import { Activity, Server, Zap, Layers, Plus, Check } from 'lucide-react';
+import { Activity, Server, Zap, Layers, Plus, Check, StickyNote } from 'lucide-react';
 import TextWithTooltip from './TextWithTooltip';
 
 interface SwitchCardProps {
@@ -10,9 +10,10 @@ interface SwitchCardProps {
   isSelected: boolean;
   onToggleSelect: (id: string) => void;
   onViewDetails: (data: SwitchSpec) => void;
+  adminNote?: string;
 }
 
-const SwitchCard: React.FC<SwitchCardProps> = ({ data, isSelected, onToggleSelect, onViewDetails }) => {
+const SwitchCard: React.FC<SwitchCardProps> = ({ data, isSelected, onToggleSelect, onViewDetails, adminNote }) => {
   
   // Use shared helper
   const speedClass = getSwitchSpeedClass(data);
@@ -64,6 +65,16 @@ const SwitchCard: React.FC<SwitchCardProps> = ({ data, isSelected, onToggleSelec
 
   return (
     <div className={`group relative flex flex-col justify-between bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-t-4 transition-all duration-200 hover:shadow-md dark:hover:border-neutral-700 ${speedColors.border} ${isSelected ? 'border-neutral-400 ring-1 ring-neutral-400 dark:border-neutral-500 dark:ring-neutral-500' : 'border-neutral-200 dark:border-neutral-800'}`}>
+      
+      {/* Admin Note Indicator */}
+      {adminNote && (
+        <div className="absolute top-0 right-0 -mt-2 -mr-2 z-10">
+          <div className="bg-yellow-100 text-yellow-600 dark:bg-yellow-900 dark:text-yellow-400 p-1.5 rounded-full shadow-md border border-yellow-200 dark:border-yellow-700" title={`Admin Note: ${adminNote}`}>
+             <StickyNote size={14} fill="currentColor" className="opacity-80" />
+          </div>
+        </div>
+      )}
+
       <div className="p-5">
         <div className="flex justify-between items-start mb-3">
           <div className="flex flex-wrap gap-2">
@@ -107,7 +118,7 @@ const SwitchCard: React.FC<SwitchCardProps> = ({ data, isSelected, onToggleSelec
           <StatItem icon={Activity} value={`${data.throughputTbps} Tbps`} label="Throughput" color="text-neutral-900 dark:text-neutral-100" />
           <StatItem icon={Server} value={data.size} label="Form Factor" />
           <StatItem icon={Zap} value={data.powerDraw.split('/')[0]} label="Typ Power" />
-          <StatItem icon={Layers} value={data.buffer} label="Buffer" />
+          <StatItem icon={Layers} value={data.buffer} label="Packet Buffer" />
         </div>
       </div>
       

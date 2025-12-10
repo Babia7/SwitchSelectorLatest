@@ -95,7 +95,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ data, isDarkMode }) => {
                 : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
             }`}
           >
-            Buffer
+            Packet Buffer
           </button>
         </div>
       </div>

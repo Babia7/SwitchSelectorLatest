@@ -43,7 +43,7 @@ const ComparisonDrawer: React.FC<ComparisonDrawerProps> = ({ selectedSwitches, o
         ['400G Ports', ...selectedSwitches.map(s => s.max400G || '0')],
         ['100G Ports', ...selectedSwitches.map(s => s.max100G || '0')],
         ['Port Details', ...selectedSwitches.map(s => s.ports)],
-        ['Buffer', ...selectedSwitches.map(s => s.buffer)],
+        ['Packet Buffer', ...selectedSwitches.map(s => s.buffer)],
         ['CPU', ...selectedSwitches.map(s => s.cpu)],
         ['Memory', ...selectedSwitches.map(s => s.memory)],
         ['Power Draw', ...selectedSwitches.map(s => s.powerDraw)],
@@ -169,7 +169,7 @@ const ComparisonDrawer: React.FC<ComparisonDrawerProps> = ({ selectedSwitches, o
                     />
 
                     <SectionRow label="Hardware Specs" />
-                    <DataRow label="Buffer" hasDiff={hasDiff('buffer')} values={selectedSwitches.map(s => s.buffer)} />
+                    <DataRow label="Packet Buffer" hasDiff={hasDiff('buffer')} values={selectedSwitches.map(s => s.buffer)} />
                     <DataRow label="CPU" hasDiff={hasDiff('cpu')} values={selectedSwitches.map(s => <span className="text-xs">{s.cpu}</span>)} />
                     <DataRow label="Memory" hasDiff={hasDiff('memory')} values={selectedSwitches.map(s => <span className="text-xs">{s.memory}</span>)} />
 

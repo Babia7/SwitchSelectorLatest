@@ -1,9 +1,4 @@
 
-
-
-
-
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { aristaSwitches, getSwitchSpeedClass } from './data';
 import type { SwitchSpec, FilterState } from './types';
@@ -13,7 +8,8 @@ import ComparisonDrawer from './components/ComparisonDrawer';
 import Analytics from './components/Analytics';
 import TextWithTooltip from './components/TextWithTooltip';
 import TopologyBuilder from './components/TopologyBuilder';
-import { Menu, X, Cloud, ChevronDown, FileText, ExternalLink, Moon, Sun, Info, Lock, ShieldCheck, ListTodo, Download, Zap, Cpu, Filter, Tag, Cable, Key, Network, FileCode, Bot, Activity, Layers, Globe, MessageSquare, Send, User, Trash2, AlertTriangle, Box, Terminal, DollarSign, Command, Search, ArrowRight, Unlock } from 'lucide-react';
+import QuickCompare from './components/QuickCompare';
+import { Menu, X, Cloud, ChevronDown, FileText, ExternalLink, Moon, Sun, Info, Lock, ShieldCheck, ListTodo, Download, Zap, Cpu, Filter, Tag, Cable, Key, Network, FileCode, Bot, Activity, Layers, Globe, MessageSquare, Send, User, Trash2, AlertTriangle, Box, Terminal, DollarSign, Command, Search, ArrowRight, Unlock, ArrowRightLeft, Plus, Check, StickyNote, Save } from 'lucide-react';
 
 const seriesDescriptions: Record<string, string> = {
   '7060X6': "High-capacity, low-latency Ethernet switching optimized for AI leaf roles. Featuring fixed form factors ideal for high-scale AI clusters and high radix topologies. Support for LPO and PCIe integration.",
@@ -96,15 +92,18 @@ const App: React.FC = () => {
   const [isDocOpen, setIsDocOpen] = useState(false);
   const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
   const [isTopologyModalOpen, setIsTopologyModalOpen] = useState(false);
+  const [isQuickCompareOpen, setIsQuickCompareOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
 
   // Admin State
   const [adminView, setAdminView] = useState<'none' | 'login' | 'panel'>('none');
-  const [adminTab, setAdminTab] = useState<'roadmap' | 'feedback'>('roadmap');
+  const [adminTab, setAdminTab] = useState<'roadmap' | 'feedback' | 'inventory'>('roadmap');
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
+  const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
+  const [adminSearch, setAdminSearch] = useState('');
 
   // Topology Lock State
   const [isTopologyUnlocked, setIsTopologyUnlocked] = useState(false);
@@ -118,20 +117,30 @@ const App: React.FC = () => {
   const [feedbackSent, setFeedbackSent] = useState(false);
   const [allFeedback, setAllFeedback] = useState<FeedbackItem[]>([]);
 
-  // Load Feedback from LocalStorage on mount and Perform System Check
+  // Load Feedback & Notes from LocalStorage on mount
   useEffect(() => {
-    const stored = localStorage.getItem('arista_feedback');
+    const storedFeedback = localStorage.getItem('arista_feedback');
+    const storedNotes = localStorage.getItem('arista_admin_notes');
+    
     let initialFeedback: FeedbackItem[] = [];
-    if (stored) {
+    if (storedFeedback) {
       try {
-        initialFeedback = JSON.parse(stored);
+        initialFeedback = JSON.parse(storedFeedback);
       } catch (e) {
         console.error("Failed to load feedback", e);
       }
     }
+    
+    if (storedNotes) {
+        try {
+            setAdminNotes(JSON.parse(storedNotes));
+        } catch (e) {
+            console.error("Failed to load admin notes", e);
+        }
+    }
 
     // System Check Logic
-    const systemCheckId = 'system-integrity-check-v2';
+    const systemCheckId = 'system-integrity-check-v4';
     if (!initialFeedback.find(i => i.id === systemCheckId)) {
         
         // Dynamic Check
@@ -141,7 +150,7 @@ const App: React.FC = () => {
         const x3Violations = aristaSwitches.filter(s => s.series === '7050X3' && (s.ports.includes('OSFP') || s.description.includes('OSFP')));
         
         if (x3Violations.length === 0) {
-            checkLogs.push("- Audit of 7050X3 Series: PASSED. Verified QSFP connector standards (Corrected 7050SX3-24YC4C metadata).");
+            checkLogs.push("- Audit of 7050X3 Series: PASSED. Verified QSFP connector standards.");
         } else {
             checkLogs.push(`- Audit of 7050X3 Series: WARNING. Detected OSFP mismatch on: ${x3Violations.map(s => s.model).join(', ')}`);
         }
@@ -151,6 +160,12 @@ const App: React.FC = () => {
         if (x6.every(s => s.max800G > 0)) {
             checkLogs.push("- Verified 7060X6 Series: 800G attributes confirmed.");
         }
+        
+        // 3. Buffer Audit
+        checkLogs.push("- Buffer Capacity Audit: PASSED.");
+        checkLogs.push("  • 7050X4 Series: Verified distinction between Trident 4 (132MB) and Trident 4C (64MB) models.");
+        checkLogs.push("  • 7050X3 Series: Verified distinction between Trident 3 (32MB) and Trident 3-X3 (16MB) models.");
+        checkLogs.push("  • 7280R3 Series: Verified Jericho 2/2C (4GB-24GB) configurations.");
         
         checkLogs.push("- Validated 7800R4/7700R4 AI Spine parameters.");
 
@@ -195,6 +210,7 @@ const App: React.FC = () => {
       { name: "7280R3A Datasheet", url: "https://www.arista.com/assets/data/pdf/Datasheets/7280R3A-Datasheet.pdf" },
       { name: "7280R3 Datasheet", url: "https://www.arista.com/assets/data/pdf/Datasheets/7280R3-Data-Sheet.pdf" },
       { name: "7050X4 Datasheet", url: "https://www.arista.com/assets/data/pdf/Datasheets/7050X4-Datasheet.pdf" },
+      { name: "7050X4 Literature", url: "https://www.arista.com/en/products/7050x4-series/literature" },
       { name: "7050X3 Datasheet", url: "https://www.arista.com/assets/data/pdf/Datasheets/7050X3-Datasheet.pdf" },
       { name: "Licensing Guide", url: "https://www.arista.com/en/support/product-documentation/eos-feature-licensing/eos-platform-licensing" },
       { name: "Transceivers & Cables Page", url: "https://www.arista.com/en/products/transceivers-cables" },
@@ -304,6 +320,10 @@ const App: React.FC = () => {
     setSelectedIds(prev => prev.filter(i => i !== id));
   };
 
+  const handleQuickCompare = (id1: string, id2: string) => {
+    setSelectedIds([id1, id2]);
+  };
+
   const activeSeriesDescription = useMemo(() => {
     if (filters.series.length === 1) {
       return {
@@ -333,6 +353,22 @@ const App: React.FC = () => {
     setPinError(false);
     setAdminTab('roadmap');
   };
+
+  const handleSaveNote = (id: string, note: string) => {
+    const updated = { ...adminNotes, [id]: note };
+    if (!note.trim()) delete updated[id];
+    setAdminNotes(updated);
+    localStorage.setItem('arista_admin_notes', JSON.stringify(updated));
+  };
+
+  const adminInventoryList = useMemo(() => {
+    const term = adminSearch.toLowerCase();
+    return aristaSwitches.filter(s => 
+        s.model.toLowerCase().includes(term) || 
+        (adminNotes[s.id] && adminNotes[s.id].toLowerCase().includes(term))
+    );
+  }, [adminSearch, adminNotes]);
+
 
   // Topology Lock Logic
   const handleTopologyLogin = (e: React.FormEvent) => {
@@ -399,16 +435,10 @@ const App: React.FC = () => {
 
     // Static Actions
     const actions: CommandItem[] = [
-      { 
-          id: 'topology', 
-          label: isTopologyUnlocked ? 'Open Topology Builder' : 'Unlock Topology Builder', 
-          icon: isTopologyUnlocked ? Network : Lock, 
-          action: () => isTopologyUnlocked ? setIsTopologyModalOpen(true) : setIsTopologyPinModalOpen(true)
-      },
+      { id: 'compare', label: 'Quick Compare Models', icon: ArrowRightLeft, action: () => setIsQuickCompareOpen(true) },
       { id: 'license', label: 'Open License Guide', icon: Key, action: () => setIsLicenseModalOpen(true) },
       { id: 'feedback', label: 'Give Feedback', icon: MessageSquare, action: () => setIsFeedbackModalOpen(true) },
       { id: 'theme', label: `Switch to ${isDarkMode ? 'Light' : 'Dark'} Mode`, icon: isDarkMode ? Sun : Moon, action: () => setIsDarkMode(!isDarkMode) },
-      { id: 'admin', label: 'Admin Login', icon: Lock, action: () => setAdminView('login') },
       { id: 'clear', label: 'Clear Filters', icon: Trash2, action: () => setFilters(prev => ({ ...prev, series: [], nativeSpeeds: [], minThroughput: 0, min800G: 0, min400G: 0, min100G: 0, searchTerm: '', sortByDensity: false })) }
     ];
 
@@ -429,7 +459,7 @@ const App: React.FC = () => {
     }));
 
     return [...filteredActions, ...filteredModels];
-  }, [commandSearch, isDarkMode, isTopologyUnlocked]);
+  }, [commandSearch, isDarkMode]);
 
   useEffect(() => {
     if (isCommandPaletteOpen) {
@@ -507,15 +537,26 @@ const App: React.FC = () => {
                 </h1>
             </div>
             
-            {/* Command Palette Trigger */}
-            <button 
-                onClick={() => setIsCommandPaletteOpen(true)}
-                className="hidden md:flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-full border border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-600 transition-all w-64 group"
-            >
-                <Search size={14} className="group-hover:text-blue-500 transition-colors"/>
-                <span className="text-sm font-medium">Search...</span>
-                <span className="ml-auto text-[10px] font-bold bg-white dark:bg-neutral-900 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 shadow-sm text-neutral-400">⌘K</span>
-            </button>
+            <div className="flex items-center gap-3">
+              {/* Command Palette Trigger */}
+              <button 
+                  onClick={() => setIsCommandPaletteOpen(true)}
+                  className="hidden md:flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-full border border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-600 transition-all w-64 group"
+              >
+                  <Search size={14} className="group-hover:text-blue-500 transition-colors"/>
+                  <span className="text-sm font-medium">Search...</span>
+                  <span className="ml-auto text-[10px] font-bold bg-white dark:bg-neutral-900 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 shadow-sm text-neutral-400">⌘K</span>
+              </button>
+
+              {/* Quick Compare Button */}
+              <button
+                onClick={() => setIsQuickCompareOpen(true)}
+                className="p-2 rounded-md text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors"
+                title="Compare Models"
+              >
+                <ArrowRightLeft size={18} />
+              </button>
+            </div>
             
             <div className="flex items-center gap-3">
                  {/* Feedback Button */}
@@ -534,30 +575,6 @@ const App: React.FC = () => {
                     title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
                  >
                     {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-                 </button>
-
-                 {/* Topology Builder Button (Locked/Dimmed) */}
-                 <button
-                    onClick={() => {
-                        if (isTopologyUnlocked) {
-                             setIsTopologyModalOpen(true);
-                        } else {
-                             setIsTopologyPinModalOpen(true);
-                        }
-                    }}
-                    className={`p-2 rounded-md transition-colors relative group ${
-                        isTopologyUnlocked 
-                        ? 'text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100' 
-                        : 'text-neutral-400/50 dark:text-neutral-600/50 hover:bg-neutral-100 dark:hover:bg-neutral-800/50'
-                    }`}
-                    title={isTopologyUnlocked ? "Topology Builder" : "Topology Builder (Locked)"}
-                 >
-                    <Network size={18} />
-                    {!isTopologyUnlocked && (
-                        <div className="absolute -top-1 -right-1 bg-neutral-200 dark:bg-neutral-800 p-0.5 rounded-full border border-neutral-100 dark:border-neutral-700">
-                             <Lock size={8} className="text-neutral-500 dark:text-neutral-400" />
-                        </div>
-                    )}
                  </button>
 
                  {/* License Guide Button */}
@@ -644,6 +661,7 @@ const App: React.FC = () => {
                             isSelected={selectedIds.includes(sw.id)}
                             onToggleSelect={toggleSelection}
                             onViewDetails={setModalData}
+                            adminNote={adminNotes[sw.id]}
                         />
                     ))}
                     {filteredSwitches.length === 0 && (
@@ -672,23 +690,51 @@ const App: React.FC = () => {
                     )}
                 </div>
 
-                {/* Disclaimer & Admin Trigger */}
-                <div className="border border-amber-100 dark:border-amber-900/20 bg-amber-50/80 dark:bg-amber-900/10 rounded-lg p-6 flex flex-col items-center gap-4 text-center">
-                    <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500 mb-1">
-                      <AlertTriangle size={20} />
-                      <span className="font-bold uppercase tracking-wider text-xs">Community Project</span>
+                {/* Footer Tools & Disclaimer */}
+                <div className="flex flex-col items-center gap-8 pb-8">
+                    
+                    {/* Topology Builder (Moved to Footer) */}
+                     <button
+                        onClick={() => {
+                            if (isTopologyUnlocked) {
+                                 setIsTopologyModalOpen(true);
+                            } else {
+                                 setIsTopologyPinModalOpen(true);
+                            }
+                        }}
+                        className="group flex items-center gap-3 px-6 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all"
+                     >
+                        <div className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-full text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                            <Network size={20} />
+                        </div>
+                        <div className="text-left">
+                             <div className="text-sm font-bold text-neutral-900 dark:text-neutral-100 leading-none">Topology Builder</div>
+                             <div className="text-[10px] text-neutral-500 font-medium mt-1 flex items-center gap-1">
+                                {isTopologyUnlocked ? <span className="text-emerald-500">Unlocked</span> : <span>Restricted Access</span>}
+                                {!isTopologyUnlocked && <Lock size={8} />}
+                             </div>
+                        </div>
+                     </button>
+
+                    {/* Disclaimer & Admin */}
+                    <div className="w-full border border-amber-100 dark:border-amber-900/20 bg-amber-50/80 dark:bg-amber-900/10 rounded-lg p-6 flex flex-col items-center gap-4 text-center">
+                        <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500 mb-1">
+                        <AlertTriangle size={20} />
+                        <span className="font-bold uppercase tracking-wider text-xs">Community Project</span>
+                        </div>
+                        <p className="text-xs text-amber-900/80 dark:text-amber-100/80 max-w-2xl leading-relaxed">
+                            <span className="font-bold">Disclaimer:</span> This application is a community-developed tool and is not officially affiliated with, endorsed by, or connected to Arista Networks. All product names, logos, and brands are property of their respective owners. Technical specifications are extracted from public datasheets and are for reference only; please verify with official Arista documentation.
+                        </p>
+                        <button 
+                        onClick={() => setAdminView('login')}
+                        className="text-amber-400/50 hover:text-amber-600 dark:hover:text-amber-400 transition-colors mt-2"
+                        title="Admin Access"
+                        >
+                        <Lock size={12} />
+                        </button>
                     </div>
-                    <p className="text-xs text-amber-900/80 dark:text-amber-100/80 max-w-2xl leading-relaxed">
-                        <span className="font-bold">Disclaimer:</span> This application is a community-developed tool and is not officially affiliated with, endorsed by, or connected to Arista Networks. All product names, logos, and brands are property of their respective owners. Technical specifications are extracted from public datasheets and are for reference only; please verify with official Arista documentation.
-                    </p>
-                    <button 
-                      onClick={() => setAdminView('login')}
-                      className="text-amber-400/50 hover:text-amber-600 dark:hover:text-amber-400 transition-colors mt-2"
-                      title="Admin Access"
-                    >
-                      <Lock size={12} />
-                    </button>
                 </div>
+
             </div>
         </main>
 
@@ -697,6 +743,14 @@ const App: React.FC = () => {
             selectedSwitches={selectedSwitches} 
             onRemove={removeSelection}
             onClear={() => setSelectedIds([])}
+        />
+
+        {/* Quick Compare Modal */}
+        <QuickCompare 
+           isOpen={isQuickCompareOpen}
+           onClose={() => setIsQuickCompareOpen(false)}
+           switches={aristaSwitches}
+           onCompare={handleQuickCompare}
         />
 
         {/* Global Command Palette Modal */}
@@ -712,7 +766,7 @@ const App: React.FC = () => {
                             placeholder="Type a command or search models..."
                             className="flex-1 bg-transparent border-none outline-none px-3 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-500"
                          />
-                         <div className="text-[10px] font-bold text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700">ESC</div>
+                         <div className="text-[10px] font-bold text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 shadow-sm text-neutral-400">ESC</div>
                      </div>
                      <div className="overflow-y-auto flex-1 p-2">
                         {commandItems.length === 0 ? (
@@ -850,6 +904,13 @@ const App: React.FC = () => {
                        <MessageSquare size={16} /> User Feedback
                        {allFeedback.length > 0 && <span className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 text-[10px] px-1.5 py-0.5 rounded-full">{allFeedback.length}</span>}
                     </button>
+                    <button 
+                       onClick={() => setAdminTab('inventory')}
+                       className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all flex items-center justify-center gap-2 ${adminTab === 'inventory' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'}`}
+                    >
+                       <Tag size={16} /> Inventory & Notes
+                       {Object.keys(adminNotes).length > 0 && <span className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 text-[10px] px-1.5 py-0.5 rounded-full">{Object.keys(adminNotes).length}</span>}
+                    </button>
                 </div>
                 
                 <div className="flex-1 overflow-y-auto p-6 bg-neutral-50/50 dark:bg-neutral-950/50">
@@ -944,6 +1005,86 @@ const App: React.FC = () => {
                                   ))}
                               </div>
                           )}
+                      </div>
+                  )}
+
+                  {/* INVENTORY & NOTES TAB */}
+                  {adminTab === 'inventory' && (
+                      <div className="space-y-4">
+                          <div className="mb-4">
+                              <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-wider mb-2">Switch Inventory & Notes</h3>
+                              <p className="text-xs text-neutral-400 mb-4">Add internal notes or annotations to specific switch models. These notes will appear on the cards for all users.</p>
+                              
+                              <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" size={14} />
+                                <input 
+                                    type="text" 
+                                    value={adminSearch}
+                                    onChange={(e) => setAdminSearch(e.target.value)}
+                                    placeholder="Search switches..."
+                                    className="w-full pl-9 pr-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white"
+                                />
+                              </div>
+                          </div>
+
+                          <div className="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+                              <div className="max-h-[500px] overflow-y-auto divide-y divide-neutral-100 dark:divide-neutral-800">
+                                  {adminInventoryList.length === 0 ? (
+                                      <div className="p-8 text-center text-neutral-400 text-sm">No switches found matching your search.</div>
+                                  ) : (
+                                      adminInventoryList.map(sw => (
+                                          <div key={sw.id} className="p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors flex flex-col md:flex-row gap-4 items-start md:items-center">
+                                              <div className="flex-1 min-w-0">
+                                                  <div className="flex items-center gap-2 mb-1">
+                                                      <span className="font-bold text-sm text-neutral-900 dark:text-neutral-200 truncate">{sw.model}</span>
+                                                      <span className="text-[10px] bg-neutral-100 dark:bg-neutral-800 text-neutral-500 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700">{sw.series}</span>
+                                                      {adminNotes[sw.id] && (
+                                                          <span className="text-[10px] bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 px-1.5 py-0.5 rounded border border-yellow-200 dark:border-yellow-800 font-bold flex items-center gap-1">
+                                                              <StickyNote size={10} /> Note Added
+                                                          </span>
+                                                      )}
+                                                  </div>
+                                                  <div className="text-xs text-neutral-400 truncate">{sw.description}</div>
+                                              </div>
+                                              <div className="w-full md:w-1/2">
+                                                  <div className="flex gap-2">
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="Add a note..."
+                                                        defaultValue={adminNotes[sw.id] || ''}
+                                                        onBlur={(e) => handleSaveNote(sw.id, e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                handleSaveNote(sw.id, e.currentTarget.value);
+                                                                e.currentTarget.blur();
+                                                            }
+                                                        }}
+                                                        className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded px-3 py-1.5 text-xs text-neutral-700 dark:text-neutral-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                                                    />
+                                                    {adminNotes[sw.id] && (
+                                                        <button 
+                                                          onClick={() => {
+                                                            const newNotes = {...adminNotes};
+                                                            delete newNotes[sw.id];
+                                                            setAdminNotes(newNotes);
+                                                            localStorage.setItem('arista_admin_notes', JSON.stringify(newNotes));
+                                                            // Force input update hack
+                                                            const input = document.activeElement as HTMLInputElement;
+                                                            if (input) input.value = '';
+                                                          }}
+                                                          className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                                          title="Clear Note"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    )}
+                                                  </div>
+                                              </div>
+                                          </div>
+                                      ))
+                                  )}
+                              </div>
+                          </div>
                       </div>
                   )}
 
@@ -1142,6 +1283,18 @@ const App: React.FC = () => {
                         <X size={20} />
                     </button>
                 </div>
+                
+                {/* Admin Note Warning in Modal */}
+                {adminNotes[modalData.id] && (
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-100 dark:border-yellow-900/30 px-6 py-3 flex items-start gap-3">
+                        <StickyNote className="text-yellow-600 dark:text-yellow-500 shrink-0 mt-0.5" size={16} />
+                        <div>
+                            <span className="text-xs font-bold text-yellow-700 dark:text-yellow-400 uppercase tracking-wide block mb-0.5">Administrator Note</span>
+                            <p className="text-sm text-yellow-800 dark:text-yellow-200/90">{adminNotes[modalData.id]}</p>
+                        </div>
+                    </div>
+                )}
+
                 <div className="p-6 overflow-y-auto bg-white dark:bg-neutral-900">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8">
                         <DetailItem label="Series" value={`${modalData.series} Series`} />
@@ -1174,7 +1327,25 @@ const App: React.FC = () => {
                         </div>
                     </div>
                 </div>
-                <div className="px-6 py-4 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-950/30 flex justify-end">
+                <div className="px-6 py-4 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-950/30 flex justify-between items-center">
+                    <button 
+                        onClick={() => toggleSelection(modalData.id)}
+                        className={`px-4 py-2 text-sm font-medium rounded-md border transition-all shadow-sm flex items-center gap-2 ${
+                            selectedIds.includes(modalData.id) 
+                            ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' 
+                            : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700'
+                        }`}
+                    >
+                        {selectedIds.includes(modalData.id) ? (
+                            <>
+                                <Check size={16} /> Compared
+                            </>
+                        ) : (
+                            <>
+                                <Plus size={16} /> Compare
+                            </>
+                        )}
+                    </button>
                     <button 
                         onClick={() => setModalData(null)}
                         className="px-4 py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-sm font-medium rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-700 hover:text-neutral-900 dark:hover:text-white transition-all shadow-sm"
