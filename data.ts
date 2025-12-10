@@ -1,4 +1,5 @@
 
+
 import type { SwitchSpec } from './types';
 
 // Helper to determine speed class (Shared with filtering logic)
@@ -891,9 +892,9 @@ export const aristaSwitches: SwitchSpec[] = [
     id: '7050SX3-24YC4C',
     model: '7050SX3-24YC4C',
     series: '7050X3',
-    description: '24x 25G SFP, 4x 100G OSFP',
+    description: '24x 25G SFP, 4x 100G QSFP',
     type: 'Switch',
-    ports: '24x SFP25, 4x OSFP100',
+    ports: '24x SFP25, 4x QSFP100',
     max800G: 0,
     max400G: 0,
     max100G: 4,
