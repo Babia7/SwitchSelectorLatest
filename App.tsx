@@ -11,7 +11,9 @@ import TopologyBuilder from './components/TopologyBuilder';
 import QuickCompare from './components/QuickCompare';
 import SwitchDetailsModal from './components/SwitchDetailsModal';
 import AdminPanel from './components/AdminPanel';
-import { Menu, X, Cloud, ChevronDown, FileText, ExternalLink, Moon, Sun, Info, Lock, Key, Network, MessageSquare, Send, AlertTriangle, Box, ArrowRightLeft, Trash2, Search, ArrowRight, Unlock } from 'lucide-react';
+import OversubCalculator from './components/OversubCalculator';
+import InteractiveDatasheet from './components/InteractiveDatasheet';
+import { Menu, X, Cloud, ChevronDown, FileText, ExternalLink, Moon, Sun, Info, Lock, Key, Network, MessageSquare, Send, AlertTriangle, Box, ArrowRightLeft, Trash2, Search, ArrowRight, Unlock, Calculator, BookOpen } from 'lucide-react';
 
 const seriesDescriptions: Record<string, string> = {
   '7060X6': "High-capacity, low-latency Ethernet switching optimized for AI leaf roles. Featuring fixed form factors ideal for high-scale AI clusters and high radix topologies. Support for LPO and PCIe integration.",
@@ -42,8 +44,10 @@ const App: React.FC = () => {
   const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
   const [isTopologyModalOpen, setIsTopologyModalOpen] = useState(false);
   const [isQuickCompareOpen, setIsQuickCompareOpen] = useState(false);
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isDatasheetOpen, setIsDatasheetOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
 
   // Admin State
@@ -374,6 +378,8 @@ const App: React.FC = () => {
     // Static Actions
     const actions: CommandItem[] = [
       { id: 'compare', label: 'Quick Compare Models', icon: ArrowRightLeft, action: () => setIsQuickCompareOpen(true) },
+      { id: 'calculator', label: 'Oversubscription Calculator', icon: Calculator, action: () => setIsCalculatorOpen(true) },
+      { id: 'datasheet', label: 'Interactive Datasheets (7280R3/A)', icon: BookOpen, action: () => setIsDatasheetOpen(true) },
       { id: 'license', label: 'Open License Guide', icon: Key, action: () => setIsLicenseModalOpen(true) },
       { id: 'feedback', label: 'Give Feedback', icon: MessageSquare, action: () => setIsFeedbackModalOpen(true) },
       { id: 'theme', label: `Switch to ${isDarkMode ? 'Light' : 'Dark'} Mode`, icon: isDarkMode ? Sun : Moon, action: () => setIsDarkMode(!isDarkMode) },
@@ -493,6 +499,25 @@ const App: React.FC = () => {
                 title="Compare Models"
               >
                 <ArrowRightLeft size={18} />
+              </button>
+
+              {/* Calculator Button */}
+              <button
+                onClick={() => setIsCalculatorOpen(true)}
+                className="p-2 rounded-md text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors"
+                title="Oversubscription Calculator"
+              >
+                <Calculator size={18} />
+              </button>
+
+              {/* Interactive Datasheet Button */}
+              <button
+                onClick={() => setIsDatasheetOpen(true)}
+                className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-full border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                title="View Interactive Datasheets"
+              >
+                <BookOpen size={14} /> 
+                <span>Datasheets</span>
               </button>
             </div>
             
@@ -631,29 +656,6 @@ const App: React.FC = () => {
                 {/* Footer Tools & Disclaimer */}
                 <div className="flex flex-col items-center gap-8 pb-8">
                     
-                    {/* Topology Builder (Moved to Footer) */}
-                     <button
-                        onClick={() => {
-                            if (isTopologyUnlocked) {
-                                 setIsTopologyModalOpen(true);
-                            } else {
-                                 setIsTopologyPinModalOpen(true);
-                            }
-                        }}
-                        className="group flex items-center gap-3 px-6 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all"
-                     >
-                        <div className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-full text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
-                            <Network size={20} />
-                        </div>
-                        <div className="text-left">
-                             <div className="text-sm font-bold text-neutral-900 dark:text-neutral-100 leading-none">Topology Builder</div>
-                             <div className="text-[10px] text-neutral-500 font-medium mt-1 flex items-center gap-1">
-                                {isTopologyUnlocked ? <span className="text-emerald-500">Unlocked</span> : <span>Restricted Access</span>}
-                                {!isTopologyUnlocked && <Lock size={8} />}
-                             </div>
-                        </div>
-                     </button>
-
                     {/* Disclaimer & Admin */}
                     <div className="w-full border border-amber-100 dark:border-amber-900/20 bg-amber-50/80 dark:bg-amber-900/10 rounded-lg p-6 flex flex-col items-center gap-4 text-center">
                         <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500 mb-1">
@@ -663,13 +665,29 @@ const App: React.FC = () => {
                         <p className="text-xs text-amber-900/80 dark:text-amber-100/80 max-w-2xl leading-relaxed">
                             <span className="font-bold">Disclaimer:</span> This application is a community-developed tool and is not officially affiliated with, endorsed by, or connected to Arista Networks. All product names, logos, and brands are property of their respective owners. Technical specifications are extracted from public datasheets and are for reference only; please verify with official Arista documentation.
                         </p>
-                        <button 
-                        onClick={() => setAdminView('login')}
-                        className="text-amber-400/50 hover:text-amber-600 dark:hover:text-amber-400 transition-colors mt-2"
-                        title="Admin Access"
-                        >
-                        <Lock size={12} />
-                        </button>
+                        
+                        <div className="flex items-center gap-4 mt-2">
+                            <button
+                                onClick={() => {
+                                    if (isTopologyUnlocked) {
+                                         setIsTopologyModalOpen(true);
+                                    } else {
+                                         setIsTopologyPinModalOpen(true);
+                                    }
+                                }}
+                                className="text-amber-900/20 hover:text-blue-600 dark:text-amber-100/20 dark:hover:text-blue-400 transition-colors"
+                                title="Topology Builder"
+                            >
+                                <Network size={14} />
+                            </button>
+                            <button 
+                                onClick={() => setAdminView('login')}
+                                className="text-amber-900/20 hover:text-amber-600 dark:text-amber-100/20 dark:hover:text-amber-400 transition-colors"
+                                title="Admin Access"
+                            >
+                                <Lock size={12} />
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -689,6 +707,18 @@ const App: React.FC = () => {
            onClose={() => setIsQuickCompareOpen(false)}
            switches={aristaSwitches}
            onCompare={handleQuickCompare}
+        />
+        
+        {/* Oversubscription Calculator */}
+        <OversubCalculator 
+            isOpen={isCalculatorOpen}
+            onClose={() => setIsCalculatorOpen(false)}
+        />
+
+        {/* Interactive Datasheet Modal */}
+        <InteractiveDatasheet 
+            isOpen={isDatasheetOpen}
+            onClose={() => setIsDatasheetOpen(false)}
         />
 
         {/* Global Command Palette Modal */}
